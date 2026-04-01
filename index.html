@@ -11,12 +11,15 @@ h1{margin-top:10px;}
 #timer{font-size:80px;margin-top:5px;}
 
 .scoreboard{flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center;}
+
 .team{width:90%; margin:5px 0; padding:20px; border-radius:15px; user-select:none; cursor:default;}
 .blue{background:#1e90ff;}
 .red{background:#e74c3c;}
+
 .score{font-size:100px;margin:10px 0;}
 
 button{width:90%; font-size:26px; padding:20px; margin:5px auto; border:none; border-radius:10px; cursor:pointer;}
+
 #controls{margin-bottom:10px;}
 #adminBtn{
   position:fixed;
@@ -99,10 +102,9 @@ const db = firebase.database();
 
 let isAdmin = false;
 let timerInterval = null;
-let timerRunning = false;
 
 // Jedinstveni ID uređaja za host logiku
-const myHostId = Math.random().toString(36).substr(2,9);
+const myHostId = Math.random().toString(36).substr(2, 9);
 
 /* LOGIN */
 function login(){
@@ -112,11 +114,6 @@ function login(){
     document.getElementById("controls").classList.remove("hidden");
     document.getElementById("adminBtn").style.display="none";
     document.body.classList.add("adminMode");
-
-    // Obeleži sebe kao host ako nema hosta
-    db.ref('match/host').transaction(current=>{
-      return current || myHostId;
-    });
   } else {
     alert("Wrong code");
   }
@@ -147,25 +144,19 @@ function updateUI(data){
 /* SYNC */
 function syncDatabase(){
   db.ref('match').on('value', snapshot=>{
-    if(!snapshot.exists()) return;
-
-    const data = snapshot.val();
+    const data = snapshot.val() || {};
     updateUI(data);
 
-    // Timer logika: SAMO host uređaj vodi increment
+    if(timerInterval){
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
+
+    // Timer radi SAMO na uređaju koji je host
     if(data.isRunning && !data.isPaused && data.host === myHostId){
-      if(!timerRunning){
-        timerInterval = setInterval(()=>{
-          db.ref('match/timeElapsed').transaction(v => (v || 0) + 1);
-        },1000);
-        timerRunning = true;
-      }
-    } else {
-      if(timerRunning){
-        clearInterval(timerInterval);
-        timerInterval = null;
-        timerRunning = false;
-      }
+      timerInterval = setInterval(()=>{
+        db.ref('match/timeElapsed').transaction(v => (v || 0) + 1);
+      },1000);
     }
   });
 }
@@ -176,20 +167,34 @@ function addScore(team){
   db.ref('match/'+team).transaction(v => (v || 0) + 1);
 }
 
-/* START (NE RESETUJE SCORE) */
+/* START (ne resetuje score) */
 function startMatch(){
   if(!isAdmin) return;
 
   playSound("startSound");
 
-  db.ref('match').update({
-    timeElapsed: 0,
-    isRunning: true,
-    isPaused: false
+  db.ref('match').transaction(current=>{
+    if(!current){
+      // ako ne postoji match
+      return {
+        blue: 0,
+        red: 0,
+        timeElapsed: 0,
+        isRunning: true,
+        isPaused: false,
+        host: myHostId
+      };
+    } else {
+      // ako već postoji match, samo start
+      return {
+        ...current,
+        timeElapsed: 0,
+        isRunning: true,
+        isPaused: false,
+        host: current.host || myHostId
+      };
+    }
   });
-
-  // Ako nema hosta, postavi sebe
-  db.ref('match/host').transaction(current=> current || myHostId);
 }
 
 /* PAUSE */
@@ -201,19 +206,16 @@ function togglePause(){
 /* END */
 function endMatch(){
   if(!isAdmin) return;
-
   db.ref('match').update({
     isRunning: false,
     isPaused: true
   });
-
   playSound("endSound");
 }
 
 /* RESET SCORE */
 function resetScore(){
   if(!isAdmin) return;
-
   db.ref('match').update({
     blue: 0,
     red: 0
@@ -224,3 +226,4 @@ syncDatabase();
 </script>
 
 </body>
+</html>
