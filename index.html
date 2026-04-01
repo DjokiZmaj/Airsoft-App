@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+!DOCTYPE html>
 <html lang="hr">
 <head>
 <meta charset="UTF-8">
@@ -102,6 +102,7 @@ const db = firebase.database();
 
 let isAdmin = false;
 let timerInterval = null;
+let localTime = 0; // lokalni timer
 
 /* LOGIN */
 function login(){
@@ -138,25 +139,30 @@ function updateUI(data){
     data.isPaused ? "Resume" : "Pause";
 }
 
-/* SYNC */
-function syncDatabase(){
-  db.ref('match').on('value', snapshot=>{
+/* SYNC DATABASE */
+db.ref('match').on('value', snapshot=>{
+  const data = snapshot.val() || {};
+  updateUI(data);
+
+  // postavi lokalni timer na Firebase vrednost
+  localTime = data.timeElapsed || 0;
+});
+
+/* TIMER INTERVAL */
+setInterval(()=>{
+  // Ako admin i utakmica aktivna i nije pauzirana
+  db.ref('match').once('value').then(snapshot=>{
     const data = snapshot.val() || {};
-    updateUI(data);
-
-    // Timer samo jedan interval na svakom uređaju
-    if(timerInterval){
-      clearInterval(timerInterval);
-      timerInterval = null;
-    }
-
-    if(data.isRunning && !data.isPaused && isAdmin){
-      timerInterval = setInterval(()=>{
-        db.ref('match/timeElapsed').transaction(v => (v || 0) + 1);
-      },1000);
+    if(isAdmin && data.isRunning && !data.isPaused){
+      localTime++;
+      document.getElementById("timer").innerText =
+        String(Math.floor(localTime/60)).padStart(2,'0') + ":" +
+        String(localTime%60).padStart(2,'0');
+      // update Firebase bez blokiranja UI
+      db.ref('match/timeElapsed').set(localTime);
     }
   });
-}
+},1000);
 
 /* SCORE */
 function addScore(team){
@@ -200,8 +206,6 @@ function resetScore(){
     red: 0
   });
 }
-
-syncDatabase();
 </script>
 
 </body>
