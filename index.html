@@ -4,48 +4,69 @@
 <meta charset="UTF-8">
 <title>Airsoft Leaderboard - Real-Time</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
 <style>
-  body { margin:0; font-family:Arial,sans-serif; text-align:center; background:#111; color:white; display:flex; flex-direction:column; justify-content:space-between; height:100vh; }
-  h1{margin-top:10px;}
-  #timer{font-size:80px;margin-top:5px;}
-  .scoreboard{flex:1 1 auto; display:flex; flex-direction:column; justify-content:center; align-items:center;}
-  .team{width:90%; margin:5px 0; padding:20px; border-radius:15px; user-select:none; cursor:default; transition:transform 0.1s;}
-  .blue{background:#1e90ff;} .red{background:#e74c3c;}
-  .score{font-size:100px;margin:10px 0;}
-  button{width:90%; font-size:26px; padding:20px; margin:5px auto; border:none; border-radius:10px; cursor:pointer;}
-  #controls{flex:0 0 auto; margin-bottom:10px;}
-  #adminBtn{position:fixed; top:10px; right:10px;}
-  .hidden{display:none;}
-  @media(max-width:767px){
-    .scoreboard{flex-direction:row; justify-content:space-around; align-items:center;width:100%; margin-top:10px;} 
-    .team{width:45%; margin:0; padding:20px;} 
-    #controls{display:flex; flex-direction:column; width:100%; margin-top:10px;} 
-    button{width:90%; font-size:24px; padding:15px;} 
-    #timer{font-size:70px; margin-bottom:10px;}
-  }
-  @media(min-width:768px){
-    .scoreboard{flex-direction:row; justify-content:space-around; align-items:flex-start;} 
-    .team{width:40%; margin:0;} 
-    .score{font-size:90px;} 
-    #timer{font-size:80px;} 
-    button{width:auto; font-size:20px; padding:10px 20px;} 
-    #controls{margin-top:20px; margin-bottom:20px;}
-  }
-  .adminMode .team{cursor:pointer;}
+body { margin:0; font-family:Arial,sans-serif; text-align:center; background:#111; color:white; display:flex; flex-direction:column; justify-content:space-between; height:100vh; }
+h1{margin-top:10px;}
+#timer{font-size:80px;margin-top:5px;}
+
+.scoreboard{flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center;}
+
+.team{width:90%; margin:5px 0; padding:20px; border-radius:15px; user-select:none; cursor:default;}
+.blue{background:#1e90ff;}
+.red{background:#e74c3c;}
+
+.score{font-size:100px;margin:10px 0;}
+
+button{width:90%; font-size:26px; padding:20px; margin:5px auto; border:none; border-radius:10px; cursor:pointer;}
+
+#controls{margin-bottom:10px;}
+#adminBtn{
+  position:fixed;
+  top:10px;
+  right:10px;
+  width:auto;
+  padding:8px 12px;
+  font-size:14px;
+  background:#333;
+  color:white;
+  border-radius:8px;
+}
+
+.hidden{display:none;}
+.adminMode .team{cursor:pointer;}
+
+/* PHONE */
+@media(max-width:767px){
+  .scoreboard{flex-direction:row; justify-content:space-around;}
+  .team{width:45%;}
+  #controls{display:flex; flex-direction:column;}
+  button{font-size:22px; padding:15px;}
+  #timer{font-size:65px;}
+}
+
+/* PC */
+@media(min-width:768px){
+  .scoreboard{flex-direction:row; justify-content:space-around;}
+  .team{width:40%;}
+}
 </style>
 </head>
+
 <body>
 
 <h1>Airsoft Match</h1>
 <button id="adminBtn" onclick="login()">Admin</button>
+
 <div id="timer">00:00</div>
 
 <div class="scoreboard">
-  <div id="bluePanel" class="team blue" onclick="addScore('blue')">
+  <div class="team blue" onclick="addScore('blue')">
     <h2>BLUE</h2>
     <div id="blueScore" class="score">0</div>
   </div>
-  <div id="redPanel" class="team red" onclick="addScore('red')">
+
+  <div class="team red" onclick="addScore('red')">
     <h2>RED</h2>
     <div id="redScore" class="score">0</div>
   </div>
@@ -61,106 +82,133 @@
 <audio id="startSound" src="https://www.soundjay.com/button/beep-07.wav"></audio>
 <audio id="endSound" src="https://www.soundjay.com/button/beep-10.wav"></audio>
 
-<!-- Firebase SDK -->
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-  // --- CONFIGURE FIREBASE ---
-  const firebaseConfig = {
-    apiKey: "AIzaSyDhLN_SvgF-gDMhBUpO0ZX8hEyGxY-ZKSM",
-    authDomain: "airsoft-application.firebaseapp.com",
-    databaseURL: "https://airsoft-application-default-rtdb.europe-west1.firebasedatabase.app",
-    projectId: "airsoft-application",
-    storageBucket: "airsoft-application.firebasestorage.app",
-    messagingSenderId: "362910192678",
-    appId: "1:362910192678:web:216ab346a50527460842e7",
-    measurementId: "G-PPD3DQZFT8"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
+const firebaseConfig = {
+  apiKey: "AIzaSyDhLN_SvgF-gDMhBUpO0ZX8hEyGxY-ZKSM",
+  authDomain: "airsoft-application.firebaseapp.com",
+  databaseURL: "https://airsoft-application-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "airsoft-application",
+  storageBucket: "airsoft-application.firebasestorage.app",
+  messagingSenderId: "362910192678",
+  appId: "1:362910192678:web:216ab346a50527460842e7"
+};
 
-  let isAdmin = false;
-  let timeElapsed = 0;
-  let timerInterval = null;
-  let isPaused = false;
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
-  function login() {
-    const code = prompt("Enter admin code:");
-    if(code==="1234"){
-      isAdmin=true;
-      document.getElementById("controls").classList.remove("hidden");
-      document.getElementById("adminBtn").style.display="none";
-      document.body.classList.add("adminMode");
-      alert("Admin mode enabled");
-    } else {
-      alert("Wrong code");
+let isAdmin = false;
+let timerInterval = null;
+
+/* LOGIN */
+function login(){
+  const code = prompt("Enter admin code:");
+  if(code==="1234"){
+    isAdmin = true;
+    document.getElementById("controls").classList.remove("hidden");
+    document.getElementById("adminBtn").style.display="none";
+    document.body.classList.add("adminMode");
+  } else {
+    alert("Wrong code");
+  }
+}
+
+/* SOUND */
+function playSound(id){
+  const audio = document.getElementById(id);
+  audio.currentTime = 0;
+  audio.play().catch(()=>{});
+}
+
+/* UI UPDATE */
+function updateUI(data){
+  document.getElementById("blueScore").innerText = data.blue || 0;
+  document.getElementById("redScore").innerText = data.red || 0;
+
+  let min = Math.floor((data.timeElapsed||0)/60);
+  let sec = (data.timeElapsed||0)%60;
+
+  document.getElementById("timer").innerText =
+    String(min).padStart(2,'0') + ":" + String(sec).padStart(2,'0');
+
+  document.getElementById("pauseBtn").innerText =
+    data.isPaused ? "Resume" : "Pause";
+}
+
+/* SYNC */
+function syncDatabase(){
+  db.ref('match').on('value', snapshot=>{
+    if(!snapshot.exists()) return;
+
+    const data = snapshot.val();
+    updateUI(data);
+
+    if(timerInterval){
+      clearInterval(timerInterval);
+      timerInterval = null;
     }
-  }
 
-  function playSound(id){
-    const audio=document.getElementById(id);
-    audio.currentTime=0;
-    audio.play().catch(e=>console.log("Audio blocked",e));
-  }
-
-  function updateUI(data){
-    document.getElementById("blueScore").innerText=data.blue;
-    document.getElementById("redScore").innerText=data.red;
-    let min=Math.floor(data.timeElapsed/60);
-    let sec=data.timeElapsed%60;
-    document.getElementById("timer").innerText=String(min).padStart(2,'0')+":"+String(sec).padStart(2,'0');
-    if(data.isPaused) {
-      document.getElementById("pauseBtn").innerText="Resume";
-    } else {
-      document.getElementById("pauseBtn").innerText="Pause";
+    // 🔥 SAMO ADMIN pokreće timer
+    if(data.isRunning && !data.isPaused && isAdmin){
+      timerInterval = setInterval(()=>{
+        db.ref('match/timeElapsed').transaction(v => (v || 0) + 1);
+      },1000);
     }
-  }
+  });
+}
 
-  function syncDatabase(){
-    db.ref('match').on('value', snapshot=>{
-      if(snapshot.exists()){
-        const data=snapshot.val();
-        updateUI(data);
-        if(timerInterval){ clearInterval(timerInterval); timerInterval=null; }
-        if(data.isRunning && !data.isPaused){
-          timerInterval=setInterval(()=>{db.ref('match/timeElapsed').transaction(v=>v+1)},1000);
-        }
-      }
-    });
-  }
+/* SCORE */
+function addScore(team){
+  if(!isAdmin) return;
+  db.ref('match/'+team).transaction(v => (v || 0) + 1);
+}
 
-  function addScore(team){
-    if(!isAdmin) return;
-    db.ref('match/'+team).transaction(v=>v+1);
-  }
+/* START (NE RESETUJE SCORE) */
+function startMatch(){
+  if(!isAdmin) return;
 
-  function startMatch(){
-    if(!isAdmin) return;
-    playSound("startSound");
-    db.ref('match').set({blue:0, red:0, timeElapsed:0, isRunning:true, isPaused:false});
-  }
+  playSound("startSound");
 
-  function togglePause(){
-    if(!isAdmin) return;
-    db.ref('match/isPaused').transaction(p=>!p);
-  }
+  db.ref('match').update({
+    timeElapsed: 0,
+    isRunning: true,
+    isPaused: false
+  });
+}
 
-  function endMatch(){
-    if(!isAdmin) return;
-    db.ref('match/isRunning').set(false);
-    db.ref('match/isPaused').set(true);
-    playSound("endSound");
-  }
+/* PAUSE */
+function togglePause(){
+  if(!isAdmin) return;
+  db.ref('match/isPaused').transaction(p => !p);
+}
 
-  function resetScore(){
-    if(!isAdmin) return;
-    db.ref('match/blue').set(0);
-    db.ref('match/red').set(0);
-  }
+/* END */
+function endMatch(){
+  if(!isAdmin) return;
 
-  // Pokreni sync odmah
-  syncDatabase();
+  db.ref('match').update({
+    isRunning: false,
+    isPaused: true
+  });
+
+  playSound("endSound");
+}
+
+/* RESET SCORE */
+function resetScore(){
+  if(!isAdmin) return;
+
+  db.ref('match').update({
+    blue: 0,
+    red: 0
+  });
+}
+
+syncDatabase();
 </script>
+
 </body>
 </html>
