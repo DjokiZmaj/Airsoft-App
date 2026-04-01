@@ -1,1 +1,18 @@
 
+name: Deploy to GitHub Pages
+
+permissions:
+  id-token: write
+  contents: read
+
+on:
+  push:
+    branches:
+      - main  # promeni ako ti je glavni branch drugačiji
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/deploy-pages@v4
