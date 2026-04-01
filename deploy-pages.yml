@@ -1,5 +1,4 @@
-
-name: Deploy to GitHub Pages
+name: Deploy HTML to GitHub Pages
 
 permissions:
   id-token: write
@@ -8,11 +7,14 @@ permissions:
 on:
   push:
     branches:
-      - main  # promeni ako ti je glavni branch drugačiji
+      - main  # promeni ako ti je glavni branch drugi
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      # 1️⃣ Preuzmi repo
       - uses: actions/checkout@v3
+
+      # 2️⃣ Deploy na GitHub Pages
       - uses: actions/deploy-pages@v4
