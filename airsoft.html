@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="UTF-8">
+<title>Airsoft Leaderboard - Real-Time</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<style>
+  body { margin:0; font-family:Arial,sans-serif; text-align:center; background:#111; color:white; display:flex; flex-direction:column; justify-content:space-between; height:100vh; }
+  h1{margin-top:10px;}
+  #timer{font-size:80px;margin-top:5px;}
+  .scoreboard{flex:1 1 auto; display:flex; flex-direction:column; justify-content:center; align-items:center;}
+  .team{width:90%; margin:5px 0; padding:20px; border-radius:15px; user-select:none; cursor:default; transition:transform 0.1s;}
+  .blue{background:#1e90ff;} .red{background:#e74c3c;}
+  .score{font-size:100px;margin:10px 0;}
+  button{width:90%; font-size:26px; padding:20px; margin:5px auto; border:none; border-radius:10px; cursor:pointer;}
+  #controls{flex:0 0 auto; margin-bottom:10px;}
+  #adminBtn{position:fixed; top:10px; right:10px;}
+  .hidden{display:none;}
+  @media(max-width:767px){.scoreboard{flex-direction:row; justify-content:space-around; align-items:center;width:100%; margin-top:10px;} .team{width:45%; margin:0; padding:20px;} #controls{display:flex; flex-direction:column; width:100%; margin-top:10px;} button{width:90%; font-size:24px; padding:15px;} #timer{font-size:70px; margin-bottom:10px;}}
+  @media(min-width:768px){.scoreboard{flex-direction:row; justify-content:space-around; align-items:flex-start;} .team{width:40%; margin:0;} .score{font-size:90px;} #timer{font-size:80px;} button{width:auto; font-size:20px; padding:10px 20px;} #controls{margin-top:20px; margin-bottom:20px;}}
+  .adminMode .team{cursor:pointer;}
+</style>
+</head>
+<body>
+
+<h1>Airsoft Match</h1>
+<button id="adminBtn" onclick="login()">Admin</button>
+<div id="timer">00:00</div>
+
+<div class="scoreboard">
+  <div id="bluePanel" class="team blue" onclick="addScore('blue')">
+    <h2>BLUE</h2>
+    <div id="blueScore" class="score">0</div>
+  </div>
+  <div id="redPanel" class="team red" onclick="addScore('red')">
+    <h2>RED</h2>
+    <div id="redScore" class="score">0</div>
+  </div>
+</div>
+
+<div id="controls" class="hidden">
+  <button onclick="startMatch()">Start Match</button>
+  <button id="pauseBtn" onclick="togglePause()">Pause</button>
+  <button onclick="endMatch()">End Match</button>
+  <button onclick="resetScore()">Reset Score</button>
+</div>
+
+<audio id="startSound" src="https://www.soundjay.com/button/beep-07.wav"></audio>
+<audio id="endSound" src="https://www.soundjay.com/button/beep-10.wav"></audio>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<script>
+  // --- CONFIGURE FIREBASE ---
+  const firebaseConfig = {
+  apiKey: "AIzaSyDhLN_SvgF-gDMhBUpO0ZX8hEyGxY-ZKSM",
+  authDomain: "airsoft-application.firebaseapp.com",
+  databaseURL: "https://airsoft-application-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "airsoft-application",
+  storageBucket: "airsoft-application.firebasestorage.app",
+  messagingSenderId: "362910192678",
+  appId: "1:362910192678:web:216ab346a50527460842e7",
+  measurementId: "G-PPD3DQZFT8"
+};
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  let isAdmin = false;
+
+  // Lokalni state
+  let timeElapsed = 0;
+  let timerInterval = null;
+  let isPaused = false;
+
+  // --- FUNKCIJE ---
+  function login() {
+    const code = prompt("Enter admin code:");
+    if(code==="1234"){
+      isAdmin=true;
+      document.getElementById("controls").classList.remove("hidden");
+      document.getElementById("adminBtn").style.display="none";
+      document.body.classList.add("adminMode");
+      alert("Admin mode enabled");
+    } else { alert("Wrong code"); }
+  }
+
+  function playSound(id){const audio=document.getElementById(id); audio.currentTime=0; audio.play().catch(e=>console.log("Audio blocked",e));}
+
+  function updateUI(data){
+    document.getElementById("blueScore").innerText=data.blue;
+    document.getElementById("redScore").innerText=data.red;
+    let min=Math.floor(data.timeElapsed/60); let sec=data.timeElapsed%60;
+    document.getElementById("timer").innerText=String(min).padStart(2,'0')+":"+String(sec).padStart(2,'0');
+    if(data.isPaused) {document.getElementById("pauseBtn").innerText="Resume";} else {document.getElementById("pauseBtn").innerText="Pause";}
+  }
+
+  function syncDatabase(){
+    db.ref('match').on('value', snapshot=>{
+      if(snapshot.exists()){
+        const data=snapshot.val();
+        updateUI(data);
+        // Reset lokalni timer
+        if(timerInterval){ clearInterval(timerInterval); timerInterval=null; }
+        if(data.isRunning && !data.isPaused){
+          timerInterval=setInterval(()=>{db.ref('match/timeElapsed').transaction(v=>v+1)},1000);
+        }
+      }
+    });
+  }
+
+  // --- SCORE ---
+  function addScore(team){
+    if(!isAdmin) return;
+    db.ref('match/'+team).transaction(v=>v+1);
+  }
+
+  // --- TIMER CONTROL ---
+  function startMatch(){
+    if(!isAdmin) return;
+    playSound("startSound");
+    db.ref('match').set({blue:0, red:0, timeElapsed:0, isRunning:true, isPaused:false});
+  }
+
+  function togglePause(){
+    if(!isAdmin) return;
+    db.ref('match/isPaused').transaction(p=>!p);
+  }
+
+  function endMatch(){
+    if(!isAdmin) return;
+    db.ref('match/isRunning').set(false);
+    db.ref('match/isPaused').set(true);
+    playSound("endSound");
+  }
+
+  function resetScore(){
+    if(!isAdmin) return;
+    db.ref('match/blue').set(0);
+    db.ref('match/red').set(0);
+  }
+
+  syncDatabase();
+</script>
+</body>
+</html>
