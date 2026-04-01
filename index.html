@@ -151,7 +151,7 @@ function syncDatabase(){
       timerInterval = null;
     }
 
-    // 🔥 SAMO ADMIN pokreće timer
+    // SAMO ADMIN pokreće timer
     if(data.isRunning && !data.isPaused && isAdmin){
       timerInterval = setInterval(()=>{
         db.ref('match/timeElapsed').transaction(v => (v || 0) + 1);
