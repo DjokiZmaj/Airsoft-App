@@ -1,4 +1,4 @@
-name: Deploy HTML to GitHub Pages
+name: Deploy Airsoft HTML
 
 permissions:
   id-token: write
@@ -7,14 +7,15 @@ permissions:
 on:
   push:
     branches:
-      - main  # promeni ako ti je glavni branch drugi
+      - main  # ili tvoj glavni branch
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      # 1️⃣ Preuzmi repo
       - uses: actions/checkout@v3
 
-      # 2️⃣ Deploy na GitHub Pages
+      # Deploy na GitHub Pages
       - uses: actions/deploy-pages@v4
+        with:
+          folder: '.'  # jer je airsoft.html u root-u
