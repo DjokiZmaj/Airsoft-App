@@ -11,15 +11,12 @@ h1{margin-top:10px;}
 #timer{font-size:80px;margin-top:5px;}
 
 .scoreboard{flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center;}
-
 .team{width:90%; margin:5px 0; padding:20px; border-radius:15px; user-select:none; cursor:default;}
 .blue{background:#1e90ff;}
 .red{background:#e74c3c;}
-
 .score{font-size:100px;margin:10px 0;}
 
 button{width:90%; font-size:26px; padding:20px; margin:5px auto; border:none; border-radius:10px; cursor:pointer;}
-
 #controls{margin-bottom:10px;}
 #adminBtn{
   position:fixed;
@@ -102,6 +99,10 @@ const db = firebase.database();
 
 let isAdmin = false;
 let timerInterval = null;
+let timerRunning = false;
+
+// Jedinstveni ID uređaja za host logiku
+const myHostId = Math.random().toString(36).substr(2,9);
 
 /* LOGIN */
 function login(){
@@ -111,6 +112,11 @@ function login(){
     document.getElementById("controls").classList.remove("hidden");
     document.getElementById("adminBtn").style.display="none";
     document.body.classList.add("adminMode");
+
+    // Obeleži sebe kao host ako nema hosta
+    db.ref('match/host').transaction(current=>{
+      return current || myHostId;
+    });
   } else {
     alert("Wrong code");
   }
@@ -146,16 +152,20 @@ function syncDatabase(){
     const data = snapshot.val();
     updateUI(data);
 
-    if(timerInterval){
-      clearInterval(timerInterval);
-      timerInterval = null;
-    }
-
-    // SAMO ADMIN pokreće timer
-    if(data.isRunning && !data.isPaused && isAdmin){
-      timerInterval = setInterval(()=>{
-        db.ref('match/timeElapsed').transaction(v => (v || 0) + 1);
-      },1000);
+    // Timer logika: SAMO host uređaj vodi increment
+    if(data.isRunning && !data.isPaused && data.host === myHostId){
+      if(!timerRunning){
+        timerInterval = setInterval(()=>{
+          db.ref('match/timeElapsed').transaction(v => (v || 0) + 1);
+        },1000);
+        timerRunning = true;
+      }
+    } else {
+      if(timerRunning){
+        clearInterval(timerInterval);
+        timerInterval = null;
+        timerRunning = false;
+      }
     }
   });
 }
@@ -177,6 +187,9 @@ function startMatch(){
     isRunning: true,
     isPaused: false
   });
+
+  // Ako nema hosta, postavi sebe
+  db.ref('match/host').transaction(current=> current || myHostId);
 }
 
 /* PAUSE */
@@ -211,4 +224,3 @@ syncDatabase();
 </script>
 
 </body>
-</html>
