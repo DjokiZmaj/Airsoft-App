@@ -103,9 +103,6 @@ const db = firebase.database();
 let isAdmin = false;
 let timerInterval = null;
 
-// Jedinstveni ID uređaja za host logiku
-const myHostId = Math.random().toString(36).substr(2, 9);
-
 /* LOGIN */
 function login(){
   const code = prompt("Enter admin code:");
@@ -147,13 +144,13 @@ function syncDatabase(){
     const data = snapshot.val() || {};
     updateUI(data);
 
+    // Timer samo jedan interval na svakom uređaju
     if(timerInterval){
       clearInterval(timerInterval);
       timerInterval = null;
     }
 
-    // Timer radi SAMO na uređaju koji je host
-    if(data.isRunning && !data.isPaused && data.host === myHostId){
+    if(data.isRunning && !data.isPaused && isAdmin){
       timerInterval = setInterval(()=>{
         db.ref('match/timeElapsed').transaction(v => (v || 0) + 1);
       },1000);
@@ -170,30 +167,12 @@ function addScore(team){
 /* START (ne resetuje score) */
 function startMatch(){
   if(!isAdmin) return;
-
   playSound("startSound");
 
-  db.ref('match').transaction(current=>{
-    if(!current){
-      // ako ne postoji match
-      return {
-        blue: 0,
-        red: 0,
-        timeElapsed: 0,
-        isRunning: true,
-        isPaused: false,
-        host: myHostId
-      };
-    } else {
-      // ako već postoji match, samo start
-      return {
-        ...current,
-        timeElapsed: 0,
-        isRunning: true,
-        isPaused: false,
-        host: current.host || myHostId
-      };
-    }
+  db.ref('match').update({
+    timeElapsed: 0,
+    isRunning: true,
+    isPaused: false
   });
 }
 
